@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
+import { supabase } from './supabaseClient';
 
 // Helper: Format to Rupiah
 const formatRupiah = (number) => {
@@ -14,27 +15,38 @@ const formatRupiah = (number) => {
 function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // --- DUMMY DATA STATE ---
-  const [wallets, setWallets] = useState([
-    { id: 1, name: 'BCA', balance: 5000000, type: 'bank' },
-    { id: 2, name: 'GoPay', balance: 250000, type: 'ewallet' },
-    { id: 3, name: 'Uang Tunai', balance: 150000, type: 'cash' },
-  ]);
+  // --- SUPABASE DATA STATE ---
+  const [wallets, setWallets] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [transactions, setTransactions] = useState([]);
 
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'Makan & Minum', type: 'expense', icon: '🍔' },
-    { id: 2, name: 'Transportasi', type: 'expense', icon: '🚗' },
-    { id: 3, name: 'Gaji', type: 'income', icon: '💰' },
-  ]);
+  // Fetch Data on Mount
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const [transactions, setTransactions] = useState([
-    { id: 1, title: 'Makan Siang', amount: 35000, type: 'expense', date: '2023-10-25', wallet: 'BCA', category: 'Makan & Minum' },
-    { id: 2, title: 'Gaji Bulanan', amount: 8000000, type: 'income', date: '2023-10-24', wallet: 'BCA', category: 'Gaji' },
-    { id: 3, title: 'Bensin', amount: 20000, type: 'expense', date: '2023-10-23', wallet: 'GoPay', category: 'Transportasi' },
-  ]);
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [walletsRes, categoriesRes, transactionsRes] = await Promise.all([
+        supabase.from('wallets').select('*').order('name'),
+        supabase.from('categories').select('*').order('name'),
+        supabase.from('transactions').select('*').order('created_at', { ascending: false })
+      ]);
 
-  // Cashflow Data (Dummy)
+      if (walletsRes.data) setWallets(walletsRes.data);
+      if (categoriesRes.data) setCategories(categoriesRes.data);
+      if (transactionsRes.data) setTransactions(transactionsRes.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Cashflow Data (Dummy for now)
   const cashflowData = [
     { name: 'Jan', income: 4000000, expense: 2400000 },
     { name: 'Feb', income: 3000000, expense: 1398000 },
@@ -46,9 +58,9 @@ function App() {
   ];
 
   // Derived Values
-  const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
-  const totalIncomeThisMonth = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpenseThisMonth = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalBalance = wallets.reduce((acc, wallet) => acc + Number(wallet.balance), 0);
+  const totalIncomeThisMonth = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
+  const totalExpenseThisMonth = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
 
   // Tx Form State
   const [txType, setTxType] = useState('expense');
@@ -57,26 +69,55 @@ function App() {
   const [txWallet, setTxWallet] = useState('');
   const [txTitle, setTxTitle] = useState('');
 
-  const handleAddTransaction = (e) => {
+  const handleAddTransaction = async (e) => {
     e.preventDefault();
     if (!txAmount || !txCategory || !txWallet) return;
     
-    const newTx = {
-      id: Date.now(),
-      title: txTitle || (txType === 'expense' ? 'Pengeluaran' : 'Pemasukan'),
-      amount: parseInt(txAmount),
-      type: txType,
-      date: new Date().toISOString().split('T')[0],
-      wallet: txWallet,
-      category: txCategory
-    };
-
-    setTransactions([newTx, ...transactions]);
+    const amountNum = parseInt(txAmount);
+    const selectedWallet = wallets.find(w => w.name === txWallet);
     
-    // Update Wallet Balance
+    if (!selectedWallet) return;
+
+    // 1. Insert Transaction to Supabase
+    const { data: newTx, error: txError } = await supabase
+      .from('transactions')
+      .insert([
+        { 
+          title: txTitle || (txType === 'expense' ? 'Pengeluaran' : 'Pemasukan'), 
+          amount: amountNum, 
+          type: txType, 
+          wallet_name: txWallet, 
+          category_name: txCategory 
+        }
+      ])
+      .select();
+
+    if (txError) {
+      console.error("Error inserting transaction:", txError);
+      alert("Gagal menyimpan transaksi");
+      return;
+    }
+
+    // 2. Update Wallet Balance in Supabase
+    const newBalance = txType === 'income' ? Number(selectedWallet.balance) + amountNum : Number(selectedWallet.balance) - amountNum;
+    
+    const { error: walletError } = await supabase
+      .from('wallets')
+      .update({ balance: newBalance })
+      .eq('id', selectedWallet.id);
+
+    if (walletError) {
+      console.error("Error updating wallet:", walletError);
+    }
+
+    // 3. Update Local State
+    if (newTx && newTx.length > 0) {
+      setTransactions([newTx[0], ...transactions]);
+    }
+    
     setWallets(wallets.map(w => {
       if (w.name === txWallet) {
-        return { ...w, balance: txType === 'income' ? w.balance + parseInt(txAmount) : w.balance - parseInt(txAmount) };
+        return { ...w, balance: newBalance };
       }
       return w;
     }));
@@ -97,6 +138,14 @@ function App() {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
+
+  if (isLoading) {
+    return (
+      <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div className="font-bold text-secondary">Loading Data dari Supabase...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -171,16 +220,20 @@ function App() {
                   <span className="text-secondary" style={{ fontSize: '0.8rem' }}>Lihat semua</span>
                </div>
 
+               {transactions.length === 0 && (
+                 <div className="text-secondary mt-4 text-center">Belum ada transaksi.</div>
+               )}
+
                {transactions.map(tx => (
                   <div key={tx.id} className="card" style={{ padding: '16px', marginBottom: '12px' }}>
                      <div className="flex justify-between align-center">
                         <div className="flex align-center gap-3">
                            <div style={{ width: 40, height: 40, backgroundColor: 'var(--bg-main)', borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
-                              {categories.find(c => c.name === tx.category)?.icon || '💸'}
+                              {categories.find(c => c.name === tx.category_name)?.icon || '💸'}
                            </div>
                            <div>
                               <div className="font-bold" style={{ fontSize: '1rem' }}>{tx.title}</div>
-                              <div className="text-secondary" style={{ fontSize: '0.8rem' }}>{tx.wallet} • {tx.date}</div>
+                              <div className="text-secondary" style={{ fontSize: '0.8rem' }}>{tx.wallet_name} • {new Date(tx.created_at).toLocaleDateString('id-ID')}</div>
                            </div>
                         </div>
                         <div className={`font-bold ${tx.type === 'income' ? 'text-green' : 'text-primary'}`}>
@@ -269,7 +322,7 @@ function App() {
 
       </div>
 
-      {/* Floating Action Button (Only show on Home or Wallets tab maybe, but global is fine) */}
+      {/* Floating Action Button */}
       <button className="fab" onClick={() => setIsTxModalOpen(true)}>
         <Plus size={32} />
       </button>
@@ -302,7 +355,7 @@ function App() {
         <div className="modal-content">
           <div className="flex justify-between align-center mb-6">
             <h2 className="font-bold" style={{ fontSize: '1.2rem' }}>Tambah Transaksi</h2>
-            <button style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setIsTxModalOpen(false)}>
+            <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setIsTxModalOpen(false)}>
               <X size={24} />
             </button>
           </div>
