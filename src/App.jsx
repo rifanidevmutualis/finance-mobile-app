@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle } from 'lucide-react';
+import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { supabase } from './supabaseClient';
 
@@ -13,19 +13,47 @@ const formatRupiah = (number) => {
 };
 
 function App() {
+  const [session, setSession] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  
+  // Auth Form State
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoginView, setIsLoginView] = useState(true);
+  const [authError, setAuthError] = useState('');
+
+  // App State
   const [activeTab, setActiveTab] = useState('home');
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // --- SUPABASE DATA STATE ---
   const [wallets, setWallets] = useState([]);
   const [categories, setCategories] = useState([]);
   const [transactions, setTransactions] = useState([]);
 
-  // Fetch Data on Mount
+  // Session Tracking
   useEffect(() => {
-    fetchData();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch Data when Session exists
+  useEffect(() => {
+    if (session) {
+      fetchData();
+    }
+  }, [session]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -39,6 +67,8 @@ function App() {
       if (walletsRes.data) setWallets(walletsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
       if (transactionsRes.data) setTransactions(transactionsRes.data);
+      
+      // If wallets empty, maybe user is new and data wasn't initialized properly, but we handle it on sign up.
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -46,7 +76,47 @@ function App() {
     }
   };
 
-  // Cashflow Data (Dummy for now)
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setIsAuthLoading(true);
+    setAuthError('');
+    try {
+      if (isLoginView) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        // Initialize default data if user is created successfully
+        if (data.user) {
+          await initializeDefaultData(data.user.id);
+        }
+        alert("Registrasi sukses! Silakan cek email atau langsung login jika auto-login aktif.");
+      }
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const initializeDefaultData = async (userId) => {
+    await supabase.from('wallets').insert([
+      { user_id: userId, name: 'BCA', balance: 0, type: 'bank' },
+      { user_id: userId, name: 'Uang Tunai', balance: 0, type: 'cash' }
+    ]);
+    await supabase.from('categories').insert([
+      { user_id: userId, name: 'Makan & Minum', type: 'expense', icon: '🍔' },
+      { user_id: userId, name: 'Transportasi', type: 'expense', icon: '🚗' },
+      { user_id: userId, name: 'Gaji', type: 'income', icon: '💰' }
+    ]);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  // Cashflow Data (Dummy for UI purpose, calculated dynamically later)
   const cashflowData = [
     { name: 'Jan', income: 4000000, expense: 2400000 },
     { name: 'Feb', income: 3000000, expense: 1398000 },
@@ -71,7 +141,7 @@ function App() {
 
   const handleAddTransaction = async (e) => {
     e.preventDefault();
-    if (!txAmount || !txCategory || !txWallet) return;
+    if (!txAmount || !txCategory || !txWallet || !session) return;
     
     const amountNum = parseInt(txAmount);
     const selectedWallet = wallets.find(w => w.name === txWallet);
@@ -83,6 +153,7 @@ function App() {
       .from('transactions')
       .insert([
         { 
+          user_id: session.user.id,
           title: txTitle || (txType === 'expense' ? 'Pengeluaran' : 'Pemasukan'), 
           amount: amountNum, 
           type: txType, 
@@ -139,6 +210,55 @@ function App() {
     window.open(whatsappUrl, '_blank');
   };
 
+  // --- RENDER AUTH SCREENS ---
+  if (isAuthLoading) {
+    return (
+      <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div className="font-bold text-secondary">Memuat Sesi...</div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="app-container" style={{ justifyContent: 'center', padding: '24px' }}>
+        <div className="card" style={{ padding: '32px' }}>
+          <div className="flex justify-center mb-6">
+            <div style={{ backgroundColor: 'var(--accent-orange)', width: 60, height: 60, borderRadius: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
+              <Wallet size={32} />
+            </div>
+          </div>
+          <h1 className="font-bold mb-2 text-center" style={{ fontSize: '1.5rem' }}>Finance App</h1>
+          <p className="text-secondary text-center mb-8" style={{ fontSize: '0.9rem' }}>
+            {isLoginView ? 'Masuk ke akun Anda' : 'Buat akun baru gratis'}
+          </p>
+
+          {authError && <div className="text-red mb-4 text-center" style={{ fontSize: '0.9rem', backgroundColor: 'rgba(248, 113, 113, 0.1)', padding: '8px', borderRadius: '8px' }}>{authError}</div>}
+
+          <form onSubmit={handleAuth}>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="form-control" required />
+            </div>
+            <div className="form-group mb-6">
+              <label>Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="form-control" required />
+            </div>
+            <button type="submit" className="btn btn-primary mb-4">
+              {isLoginView ? 'Masuk' : 'Daftar Sekarang'}
+            </button>
+            <div className="text-center">
+              <button type="button" onClick={() => setIsLoginView(!isLoginView)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', textDecoration: 'underline', cursor: 'pointer' }}>
+                {isLoginView ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDER MAIN APP ---
   if (isLoading) {
     return (
       <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
@@ -160,7 +280,7 @@ function App() {
             </div>
             <div>
                <div className="text-secondary" style={{ fontSize: '0.8rem' }}>Selamat datang,</div>
-               <div className="font-bold">Muhamad</div>
+               <div className="font-bold">{session.user.email.split('@')[0]}</div>
             </div>
           </div>
           <Bell size={20} className="text-secondary" />
@@ -251,6 +371,10 @@ function App() {
           <>
             <h1 className="font-bold mb-6" style={{ fontSize: '1.5rem' }}>Dompet Saya</h1>
             
+            {wallets.length === 0 && (
+               <div className="text-secondary text-center mb-4">Belum ada dompet.</div>
+            )}
+
             {wallets.map(wallet => (
                <div key={wallet.id} className="card mb-4">
                   <div className="flex justify-between align-center mb-2">
@@ -298,7 +422,7 @@ function App() {
         {/* --- TAB: SETTINGS & REPORT --- */}
         {activeTab === 'settings' && (
           <>
-            <h1 className="font-bold mb-6" style={{ fontSize: '1.5rem' }}>Pengaturan & Laporan</h1>
+            <h1 className="font-bold mb-6" style={{ fontSize: '1.5rem' }}>Pengaturan</h1>
             
             <div className="card mb-6">
                <h3 className="font-bold mb-2">Laporan Bulan Ini</h3>
@@ -312,10 +436,12 @@ function App() {
             <div className="card">
                <h3 className="font-bold mb-4">Akun</h3>
                <div className="form-group">
-                  <label>Email</label>
-                  <div className="form-control" style={{ opacity: 0.5 }}>user@example.com</div>
+                  <label>Email Terdaftar</label>
+                  <div className="form-control" style={{ opacity: 0.5 }}>{session.user.email}</div>
                </div>
-               <button className="btn btn-outline" style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}>Logout</button>
+               <button onClick={handleLogout} className="btn btn-outline" style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)', marginTop: '16px' }}>
+                 <LogOut size={20} /> Logout
+               </button>
             </div>
           </>
         )}
