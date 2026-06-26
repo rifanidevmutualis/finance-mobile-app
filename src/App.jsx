@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil } from 'lucide-react';
+import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil, ChevronRight } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { supabase } from './supabaseClient';
 
@@ -27,6 +27,7 @@ function App() {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [isWalletDetailsOpen, setIsWalletDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // --- SUPABASE DATA STATE ---
@@ -130,25 +131,73 @@ function App() {
   const totalExpenseThisMonth = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
 
   // Tx Form State
+  const [txId, setTxId] = useState(null);
+  const [oldTx, setOldTx] = useState(null);
   const [txType, setTxType] = useState('expense');
   const [txAmount, setTxAmount] = useState('');
   const [txCategory, setTxCategory] = useState('');
   const [txWallet, setTxWallet] = useState('');
   const [txTitle, setTxTitle] = useState('');
 
-  // Wallet Form State
-  const [walletName, setWalletName] = useState('');
-  const [walletType, setWalletType] = useState('bank');
-  const [walletBalance, setWalletBalance] = useState('');
-
-  // Category Form State
-  const [catForm, setCatForm] = useState({ id: null, name: '', type: 'expense', icon: '💸' });
+  const handleOpenTxModal = (tx = null) => {
+    if (tx) {
+      setTxId(tx.id);
+      setOldTx(tx);
+      setTxType(tx.type);
+      setTxTitle(tx.title);
+      setTxAmount(tx.amount.toString());
+      setTxWallet(tx.wallet_name);
+      setTxCategory(tx.category_name);
+    } else {
+      setTxId(null);
+      setOldTx(null);
+      setTxType('expense');
+      setTxTitle('');
+      setTxAmount('');
+      setTxWallet('');
+      setTxCategory('');
+    }
+    setIsTxModalOpen(true);
+  };
 
   const handleAddTransaction = async (e) => {
     e.preventDefault();
     if (!txAmount || !txCategory || !txWallet || !session) return;
     
     const amountNum = parseInt(txAmount);
+    
+    if (txId && oldTx) {
+       // UPDATE LOGIC
+       const { error: txError } = await supabase
+          .from('transactions')
+          .update({ title: txTitle, amount: amountNum, type: txType, wallet_name: txWallet, category_name: txCategory })
+          .eq('id', txId);
+       
+       if (txError) return alert("Gagal update transaksi");
+
+       // Revert old balance
+       const oldWallet = wallets.find(w => w.name === oldTx.wallet_name);
+       if (oldWallet) {
+          const revertAmount = oldTx.type === 'income' ? -oldTx.amount : oldTx.amount;
+          await supabase.from('wallets').update({ balance: Number(oldWallet.balance) + revertAmount }).eq('id', oldWallet.id);
+       }
+       // Apply new balance (Since this is complex local state logic, we just refetch data from DB to guarantee correctness)
+       const newWallet = wallets.find(w => w.name === txWallet);
+       if (newWallet) {
+          // Note: If newWallet == oldWallet, we technically need the reverted balance first. 
+          // So it's much safer to just let the DB handle it and we refresh.
+          const finalWalletData = await supabase.from('wallets').select('balance').eq('id', newWallet.id).single();
+          if (finalWalletData.data) {
+             const applyAmount = txType === 'income' ? amountNum : -amountNum;
+             await supabase.from('wallets').update({ balance: Number(finalWalletData.data.balance) + applyAmount }).eq('id', newWallet.id);
+          }
+       }
+       fetchData();
+       setIsTxModalOpen(false);
+       return;
+    }
+
+    // INSERT LOGIC
     const selectedWallet = wallets.find(w => w.name === txWallet);
     if (!selectedWallet) return;
 
@@ -172,13 +221,28 @@ function App() {
     await supabase.from('wallets').update({ balance: newBalance }).eq('id', selectedWallet.id);
 
     if (newTx && newTx.length > 0) setTransactions([newTx[0], ...transactions]);
-    
     setWallets(wallets.map(w => w.name === txWallet ? { ...w, balance: newBalance } : w));
     setIsTxModalOpen(false);
-    setTxAmount('');
-    setTxTitle('');
   };
 
+  const handleDeleteTransaction = async (tx) => {
+    if(!window.confirm("Hapus transaksi ini?")) return;
+    const { error } = await supabase.from('transactions').delete().eq('id', tx.id);
+    if (!error) {
+       const wallet = wallets.find(w => w.name === tx.wallet_name);
+       if (wallet) {
+          const revertAmount = tx.type === 'income' ? -tx.amount : tx.amount;
+          await supabase.from('wallets').update({ balance: Number(wallet.balance) + revertAmount }).eq('id', wallet.id);
+       }
+       fetchData(); // Reload to sync UI
+    }
+  };
+
+  // Wallet Form State
+  const [walletName, setWalletName] = useState('');
+  const [walletType, setWalletType] = useState('bank');
+  const [walletBalance, setWalletBalance] = useState('');
+  
   const handleAddWallet = async (e) => {
     e.preventDefault();
     if (!walletName || !session) return;
@@ -190,11 +254,7 @@ function App() {
 
     if (error) return alert("Gagal menambahkan dompet: " + error.message);
     if (newWallet && newWallet.length > 0) setWallets([...wallets, newWallet[0]]);
-
     setIsWalletModalOpen(false);
-    setWalletName('');
-    setWalletBalance('');
-    setWalletType('bank');
   };
 
   const handleDeleteWallet = async (walletId) => {
@@ -204,7 +264,9 @@ function App() {
     setWallets(wallets.filter(w => w.id !== walletId));
   };
 
-  // --- Category Handlers ---
+  // Category Form State
+  const [catForm, setCatForm] = useState({ id: null, name: '', type: 'expense', icon: '💸' });
+
   const handleOpenCatModal = (category = null) => {
     if (category) {
       setCatForm({ id: category.id, name: category.name, type: category.type, icon: category.icon });
@@ -219,19 +281,11 @@ function App() {
     if (!catForm.name || !catForm.icon || !session) return;
 
     if (catForm.id) {
-      const { error } = await supabase
-        .from('categories')
-        .update({ name: catForm.name, type: catForm.type, icon: catForm.icon })
-        .eq('id', catForm.id);
-      
+      const { error } = await supabase.from('categories').update({ name: catForm.name, type: catForm.type, icon: catForm.icon }).eq('id', catForm.id);
       if (error) return alert("Gagal edit kategori: " + error.message);
       setCategories(categories.map(c => c.id === catForm.id ? { ...c, ...catForm } : c));
     } else {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert([{ user_id: session.user.id, name: catForm.name, type: catForm.type, icon: catForm.icon }])
-        .select();
-      
+      const { data, error } = await supabase.from('categories').insert([{ user_id: session.user.id, name: catForm.name, type: catForm.type, icon: catForm.icon }]).select();
       if (error) return alert("Gagal tambah kategori: " + error.message);
       if (data) setCategories([...categories, data[0]]);
     }
@@ -243,18 +297,6 @@ function App() {
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) return alert("Gagal menghapus kategori: " + error.message);
     setCategories(categories.filter(c => c.id !== id));
-  };
-
-  const handleSendReportWA = () => {
-    const message = `*Laporan Keuangan Bulan Ini* 📊\n\n` +
-      `Total Saldo Saat Ini: ${formatRupiah(totalBalance)}\n` +
-      `Pemasukan Bulan Ini: ${formatRupiah(totalIncomeThisMonth)}\n` +
-      `Pengeluaran Bulan Ini: ${formatRupiah(totalExpenseThisMonth)}\n\n` +
-      `Sisa Uang (Arus Kas): ${formatRupiah(totalIncomeThisMonth - totalExpenseThisMonth)}\n\n` +
-      `_Laporan dikirim otomatis dari App Keuangan_`;
-    
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
   };
 
   if (isAuthLoading) {
@@ -325,33 +367,41 @@ function App() {
         {/* --- TAB: HOME --- */}
         {activeTab === 'home' && (
           <>
-            <div className="card mb-6" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, #2a2a2d 100%)' }}>
-              <div className="text-secondary mb-1">Total Saldo (Semua Dompet)</div>
-              <div className="font-bold mb-4" style={{ fontSize: '2rem' }}>{formatRupiah(totalBalance)}</div>
-              <div className="flex gap-4">
-                <div className="flex align-center gap-2">
-                  <div style={{ background: 'rgba(74, 222, 128, 0.1)', padding: '6px', borderRadius: '50%' }}>
-                     <ArrowDownRight size={16} className="text-green" />
-                  </div>
-                  <div>
-                    <div className="text-secondary" style={{ fontSize: '0.7rem' }}>Pemasukan</div>
-                    <div className="font-bold text-green" style={{ fontSize: '0.9rem' }}>{formatRupiah(totalIncomeThisMonth)}</div>
-                  </div>
-                </div>
-                <div className="flex align-center gap-2">
-                  <div style={{ background: 'rgba(248, 113, 113, 0.1)', padding: '6px', borderRadius: '50%' }}>
-                     <ArrowUpRight size={16} className="text-red" />
-                  </div>
-                  <div>
-                    <div className="text-secondary" style={{ fontSize: '0.7rem' }}>Pengeluaran</div>
-                    <div className="font-bold text-red" style={{ fontSize: '0.9rem' }}>{formatRupiah(totalExpenseThisMonth)}</div>
-                  </div>
-                </div>
+            {/* Total Balance Orange Card */}
+            <div className="card-orange-gradient mb-6" onClick={() => setIsWalletDetailsOpen(true)}>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                 <div className="flex justify-between align-center mb-2">
+                    <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>Total Saldo (Semua Dompet)</span>
+                    <ChevronRight size={16} style={{ opacity: 0.7 }} />
+                 </div>
+                 <div className="font-bold mb-4" style={{ fontSize: '2rem', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                    {formatRupiah(totalBalance)}
+                 </div>
+                 <div className="flex gap-4">
+                   <div className="flex align-center gap-2">
+                     <div style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '6px', borderRadius: '50%' }}>
+                        <ArrowDownRight size={14} color="white" />
+                     </div>
+                     <div>
+                       <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>Pemasukan</div>
+                       <div className="font-bold" style={{ fontSize: '0.85rem' }}>{formatRupiah(totalIncomeThisMonth)}</div>
+                     </div>
+                   </div>
+                   <div className="flex align-center gap-2">
+                     <div style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '6px', borderRadius: '50%' }}>
+                        <ArrowUpRight size={14} color="white" />
+                     </div>
+                     <div>
+                       <div style={{ fontSize: '0.65rem', opacity: 0.8 }}>Pengeluaran</div>
+                       <div className="font-bold" style={{ fontSize: '0.85rem' }}>{formatRupiah(totalExpenseThisMonth)}</div>
+                     </div>
+                   </div>
+                 </div>
               </div>
             </div>
 
             <div className="card mb-6">
-              <h2 className="font-semibold mb-4 text-secondary" style={{ fontSize: '1rem' }}>Arus Kas (Cash Flow)</h2>
+              <h2 className="font-semibold mb-4 text-secondary" style={{ fontSize: '0.9rem' }}>Tren Pendapatan dan Pengeluaran (1 Bulan)</h2>
               <div style={{ width: '100%', height: '160px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={cashflowData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
@@ -364,23 +414,29 @@ function App() {
 
             <div>
                <div className="flex justify-between align-center mb-4">
-                  <h2 className="font-semibold" style={{ fontSize: '1.1rem' }}>Transaksi Terakhir</h2>
+                  <h2 className="font-semibold" style={{ fontSize: '1.1rem' }}>Riwayat Transaksi</h2>
                </div>
                {transactions.length === 0 && <div className="text-secondary mt-4 text-center">Belum ada transaksi.</div>}
                {transactions.map(tx => (
-                  <div key={tx.id} className="card" style={{ padding: '16px', marginBottom: '12px' }}>
-                     <div className="flex justify-between align-center">
+                  <div key={tx.id} className="tx-card-layered">
+                     <div className="tx-card-content">
                         <div className="flex align-center gap-3">
-                           <div style={{ width: 40, height: 40, backgroundColor: 'var(--bg-main)', borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
+                           <div style={{ width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
                               {categories.find(c => c.name === tx.category_name)?.icon || '💸'}
                            </div>
                            <div>
-                              <div className="font-bold" style={{ fontSize: '1rem' }}>{tx.title}</div>
-                              <div className="text-secondary" style={{ fontSize: '0.8rem' }}>{tx.wallet_name} • {new Date(tx.created_at).toLocaleDateString('id-ID')}</div>
+                              <div className="font-bold" style={{ fontSize: '1rem', marginBottom: '2px' }}>{tx.title}</div>
+                              <div className="text-secondary" style={{ fontSize: '0.75rem' }}>{tx.wallet_name} • {new Date(tx.created_at).toLocaleDateString('id-ID')}</div>
                            </div>
                         </div>
-                        <div className={`font-bold ${tx.type === 'income' ? 'text-green' : 'text-primary'}`}>
-                           {tx.type === 'income' ? '+' : '-'}{formatRupiah(tx.amount)}
+                        <div className="flex flex-col align-end gap-2">
+                           <div className={`font-bold ${tx.type === 'income' ? 'text-green' : 'text-primary'}`}>
+                              {tx.type === 'income' ? '+' : '-'}{formatRupiah(tx.amount)}
+                           </div>
+                           <div className="flex gap-2">
+                              <button className="tx-action-btn" onClick={() => handleOpenTxModal(tx)}><Pencil size={12} /></button>
+                              <button className="tx-action-btn" onClick={() => handleDeleteTransaction(tx)}><Trash2 size={12} /></button>
+                           </div>
                         </div>
                      </div>
                   </div>
@@ -465,7 +521,10 @@ function App() {
             <div className="card mb-6">
                <h3 className="font-bold mb-2">Laporan Bulan Ini</h3>
                <p className="text-secondary mb-4" style={{ fontSize: '0.9rem' }}>Kirim ringkasan laporan keuangan Anda bulan ini langsung via WhatsApp.</p>
-               <button className="btn" style={{ backgroundColor: '#25D366', color: 'white' }} onClick={handleSendReportWA}>
+               <button className="btn" style={{ backgroundColor: '#25D366', color: 'white' }} onClick={() => {
+                   const message = `*Laporan Keuangan Bulan Ini* 📊\n\nTotal Saldo Saat Ini: ${formatRupiah(totalBalance)}\nPemasukan Bulan Ini: ${formatRupiah(totalIncomeThisMonth)}\nPengeluaran Bulan Ini: ${formatRupiah(totalExpenseThisMonth)}\n\nSisa Uang (Arus Kas): ${formatRupiah(totalIncomeThisMonth - totalExpenseThisMonth)}\n\n_Laporan dikirim otomatis dari App Keuangan_`;
+                   window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+               }}>
                   <MessageCircle size={20} /> Kirim ke WhatsApp
                </button>
             </div>
@@ -484,7 +543,7 @@ function App() {
 
       </div>
 
-      <button className="fab" onClick={() => setIsTxModalOpen(true)}><Plus size={32} /></button>
+      <button className="fab" onClick={() => handleOpenTxModal()}><Plus size={32} /></button>
 
       {/* Bottom Navigation */}
       <div className="bottom-nav">
@@ -505,11 +564,40 @@ function App() {
 
       {/* MODALS */}
       
+      {/* Wallet Details Pop-up */}
+      <div className={`modal-overlay ${isWalletDetailsOpen ? 'open' : ''}`} onClick={(e) => { if(e.target.className.includes('modal-overlay')) setIsWalletDetailsOpen(false); }}>
+        <div className="modal-content">
+          <div className="flex justify-between align-center mb-6">
+            <h2 className="font-bold" style={{ fontSize: '1.2rem' }}>Rincian Dompet</h2>
+            <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setIsWalletDetailsOpen(false)}>
+              <X size={24} />
+            </button>
+          </div>
+          {wallets.length === 0 ? <p className="text-secondary text-center">Belum ada dompet.</p> : (
+             <div className="flex flex-col gap-3">
+               {wallets.map(w => (
+                  <div key={w.id} className="flex justify-between align-center" style={{ padding: '12px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                     <div className="flex align-center gap-3">
+                        <Wallet size={18} className="text-secondary" />
+                        <span className="font-bold">{w.name}</span>
+                     </div>
+                     <span className="font-bold" style={{ color: 'var(--accent-orange)' }}>{formatRupiah(w.balance)}</span>
+                  </div>
+               ))}
+               <div className="flex justify-between align-center mt-2 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <span className="text-secondary font-bold">TOTAL SALDO</span>
+                  <span className="font-bold" style={{ fontSize: '1.2rem' }}>{formatRupiah(totalBalance)}</span>
+               </div>
+             </div>
+          )}
+        </div>
+      </div>
+
       {/* Transaction Modal */}
       <div className={`modal-overlay ${isTxModalOpen ? 'open' : ''}`} onClick={(e) => { if(e.target.className.includes('modal-overlay')) setIsTxModalOpen(false); }}>
         <div className="modal-content">
           <div className="flex justify-between align-center mb-6">
-            <h2 className="font-bold" style={{ fontSize: '1.2rem' }}>Tambah Transaksi</h2>
+            <h2 className="font-bold" style={{ fontSize: '1.2rem' }}>{txId ? 'Edit Transaksi' : 'Tambah Transaksi'}</h2>
             <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setIsTxModalOpen(false)}>
               <X size={24} />
             </button>

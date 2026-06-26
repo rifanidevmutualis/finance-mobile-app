@@ -440,3 +440,87 @@ body {
   background: rgba(239, 68, 68, 0.8);
   color: white;
 }
+
+/* Dashboard Orangle Gradient Card */
+.card-orange-gradient {
+  background: linear-gradient(135deg, #FF8008 0%, #FFA03A 100%);
+  border-radius: 20px;
+  padding: 16px;
+  color: white;
+  box-shadow: 0 10px 20px rgba(255, 128, 8, 0.3);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card-orange-gradient:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(255, 128, 8, 0.4);
+}
+.card-orange-gradient::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* 2-Layer Transaction Card */
+.tx-card-layered {
+  position: relative;
+  background: transparent;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  padding: 2px;
+}
+.tx-card-layered::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: -4px;
+  bottom: -4px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%);
+  border-radius: 16px;
+  z-index: 0;
+  transition: all 0.3s ease;
+}
+.tx-card-layered:hover::before {
+  top: 6px;
+  left: 6px;
+  right: -6px;
+  bottom: -6px;
+  background: linear-gradient(135deg, rgba(255, 128, 8, 0.2) 0%, rgba(255, 128, 8, 0.05) 100%);
+}
+.tx-card-content {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 16px;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tx-action-btn {
+  background: rgba(255,255,255,0.05);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tx-action-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
