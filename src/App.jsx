@@ -428,31 +428,30 @@ function App() {
                <div className="text-secondary text-center mb-4">Belum ada dompet.</div>
             )}
 
-            {wallets.map((wallet, index) => {
-               // Assign style based on type
-               let walletClass = 'wallet-default';
-               if(wallet.type === 'bank') walletClass = 'wallet-bank';
-               if(wallet.type === 'ewallet') walletClass = 'wallet-ewallet';
-               if(wallet.type === 'cash') walletClass = 'wallet-cash';
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              {wallets.map((wallet, index) => {
+                 let walletClass = 'wallet-default';
+                 if(wallet.type === 'bank') walletClass = 'wallet-bank';
+                 if(wallet.type === 'ewallet') walletClass = 'wallet-ewallet';
+                 if(wallet.type === 'cash') walletClass = 'wallet-cash';
 
-               return (
-                 <div key={wallet.id} className={`wallet-card ${walletClass}`} style={{ animationDelay: `${index * 0.1}s` }}>
-                    <button className="delete-wallet-btn" onClick={() => handleDeleteWallet(wallet.id)} title="Hapus Dompet">
-                       <Trash2 size={16} />
-                    </button>
-                    <div className="flex justify-between align-center mb-4">
-                       <div className="flex align-center gap-2">
-                          <Wallet size={20} style={{ opacity: 0.8 }} />
-                          <span className="font-bold" style={{ letterSpacing: '1px' }}>{wallet.name}</span>
-                       </div>
-                    </div>
-                    <div className="text-secondary mb-1" style={{ fontSize: '0.75rem', opacity: 0.7 }}>Total Saldo</div>
-                    <div className="font-bold" style={{ fontSize: '1.8rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-                       {formatRupiah(wallet.balance)}
-                    </div>
-                 </div>
-               )
-            })}
+                 return (
+                   <div key={wallet.id} className={`wallet-card ${walletClass}`} style={{ animationDelay: `${index * 0.1}s`, padding: '16px', margin: 0 }}>
+                      <button className="delete-wallet-btn" onClick={() => handleDeleteWallet(wallet.id)} title="Hapus Dompet" style={{ top: '8px', right: '8px', width: '28px', height: '28px' }}>
+                         <Trash2 size={14} />
+                      </button>
+                      <div className="flex align-center gap-2 mb-3">
+                         <Wallet size={16} style={{ opacity: 0.8 }} />
+                         <span className="font-bold" style={{ fontSize: '0.9rem' }}>{wallet.name}</span>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: '4px', color: 'rgba(255,255,255,0.7)' }}>Total Saldo</div>
+                      <div className="font-bold" style={{ fontSize: '1.1rem', wordBreak: 'break-word', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                         {formatRupiah(wallet.balance)}
+                      </div>
+                   </div>
+                 )
+              })}
+            </div>
 
             <button className="btn btn-outline" style={{ marginTop: '16px', borderStyle: 'dashed' }} onClick={() => setIsWalletModalOpen(true)}>
                <Plus size={20} /> Tambah Dompet Baru
