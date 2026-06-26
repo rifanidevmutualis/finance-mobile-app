@@ -339,10 +339,7 @@ function App() {
               <Activity size={36} />
             </div>
           </div>
-          <h1 className="font-bold mb-2 text-center" style={{ fontSize: '1.6rem' }}>Finance Tracker 1.0</h1>
-          <p className="text-secondary text-center mb-8" style={{ fontSize: '0.9rem' }}>
-            {isLoginView ? 'Masuk ke akun Anda' : 'Buat akun baru gratis'}
-          </p>
+          <h1 className="font-bold mb-8 text-center" style={{ fontSize: '1.6rem' }}>Finance Tracker 1.0</h1>
 
           {authError && <div className="text-red mb-4 text-center" style={{ fontSize: '0.9rem', backgroundColor: 'rgba(248, 113, 113, 0.1)', padding: '8px', borderRadius: '8px' }}>{authError}</div>}
 
