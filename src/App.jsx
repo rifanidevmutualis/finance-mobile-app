@@ -570,13 +570,13 @@ function App() {
                <p className="text-secondary mb-4" style={{ fontSize: '0.9rem' }}>Filter tanggal untuk merekap arus kas dan saldo per dompet.</p>
                
                <div className="flex gap-2 mb-4">
-                  <div style={{ flex: 1 }}>
-                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Mulai</label>
-                     <input type="date" className="form-control" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.75rem' }} />
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                     <label style={{ fontSize: '0.8rem', marginBottom: '4px', display: 'block', color: 'var(--text-secondary)' }}>Mulai</label>
+                     <input type="date" className="form-control" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.8rem', width: '100%' }} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sampai</label>
-                     <input type="date" className="form-control" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.75rem' }} />
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                     <label style={{ fontSize: '0.8rem', marginBottom: '4px', display: 'block', color: 'var(--text-secondary)' }}>Sampai</label>
+                     <input type="date" className="form-control" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.8rem', width: '100%' }} />
                   </div>
                </div>
 
@@ -601,14 +601,23 @@ function App() {
             </div>
             <div className="card">
                <h3 className="font-bold mb-4">Akun & Profil</h3>
-               <form onSubmit={handleUpdateProfile}>
+               <form onSubmit={handleUpdateProfile} className="mb-6">
                  <div className="form-group">
                     <label>Nama Tampilan</label>
                     <input type="text" className="form-control" value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Nama Anda" />
                  </div>
                  <div className="form-group">
-                    <label>URL Foto Profil (Opsional)</label>
-                    <input type="text" className="form-control" value={profileAvatar} onChange={e => setProfileAvatar(e.target.value)} placeholder="https://..." />
+                    <label>Upload Foto Profil (Opsional, Max 1MB)</label>
+                    <input type="file" accept="image/*" className="form-control" onChange={(e) => {
+                         const file = e.target.files[0];
+                         if (file) {
+                             if (file.size > 1024 * 1024) return alert("Ukuran gambar maksimal 1MB!");
+                             const reader = new FileReader();
+                             reader.onloadend = () => setProfileAvatar(reader.result);
+                             reader.readAsDataURL(file);
+                         }
+                    }} style={{ padding: '12px' }} />
+                    {profileAvatar && profileAvatar.startsWith('data:image') && <div className="mt-2 text-secondary" style={{ fontSize: '0.75rem', color: 'var(--accent-green)' }}>✓ Gambar siap disimpan</div>}
                  </div>
                  <button type="submit" className="btn btn-primary" style={{ padding: '8px', fontSize: '0.85rem' }}>Simpan Profil</button>
                </form>
