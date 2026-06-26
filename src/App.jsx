@@ -27,6 +27,7 @@ function App() {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [isWalletDetailsOpen, setIsWalletDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -391,7 +392,10 @@ function App() {
                <div className="font-bold">{session.user.user_metadata?.full_name || session.user.email.split('@')[0]}</div>
             </div>
           </div>
-          <Bell size={20} className="text-secondary" />
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }} onClick={() => setIsNotifModalOpen(true)}>
+             <Bell size={24} className="text-secondary" />
+             {transactions.length > 0 && <span style={{ position: 'absolute', top: 0, right: 0, width: '10px', height: '10px', backgroundColor: 'var(--accent-red)', borderRadius: '50%' }}></span>}
+          </button>
         </div>
 
         {/* --- TAB: HOME --- */}
@@ -791,6 +795,34 @@ function App() {
               <button type="submit" className="btn btn-primary" style={{ backgroundColor: catForm.type === 'expense' ? 'var(--accent-red)' : 'var(--accent-green)' }}>Simpan Kategori</button>
             </div>
           </form>
+        </div>
+      </div>
+
+      {/* Notification Modal */}
+      <div className={`modal-overlay ${isNotifModalOpen ? 'open' : ''}`} onClick={(e) => { if(e.target.className.includes('modal-overlay')) setIsNotifModalOpen(false); }}>
+        <div className="modal-content" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+          <div className="flex justify-between align-center mb-6">
+            <h2 className="font-bold" style={{ fontSize: '1.2rem' }}>Notifikasi Riwayat</h2>
+            <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setIsNotifModalOpen(false)}>
+              <X size={24} />
+            </button>
+          </div>
+          <div>
+            {transactions.slice(0, 10).map(tx => (
+              <div key={tx.id} className="flex align-center gap-4 mb-4" style={{ padding: '12px', backgroundColor: 'var(--bg-default)', borderRadius: '12px' }}>
+                <div style={{ fontSize: '1.5rem' }}>{tx.type === 'income' ? '📥' : '📤'}</div>
+                <div style={{ flex: 1 }}>
+                   <div style={{ fontSize: '0.85rem' }}>{tx.type === 'income' ? 'Pemasukan ditambahkan' : 'Pengeluaran ditambahkan'}</div>
+                   <div className="font-bold">{tx.title || (tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran')}</div>
+                   <div className="text-secondary" style={{ fontSize: '0.75rem' }}>{new Date(tx.created_at).toLocaleDateString('id-ID')}</div>
+                </div>
+                <div className="font-bold" style={{ color: tx.type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                   {tx.type === 'income' ? '+' : '-'}{formatRupiah(tx.amount)}
+                </div>
+              </div>
+            ))}
+            {transactions.length === 0 && <div className="text-secondary text-center">Belum ada riwayat transaksi.</div>}
+          </div>
         </div>
       </div>
 
