@@ -21,6 +21,11 @@
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--bg-main);
@@ -45,12 +50,14 @@ body {
 .app-container {
   max-width: 480px;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   background-color: var(--bg-main);
   position: relative;
   display: flex;
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0,0,0,0.5); /* shadow for desktop preview */
+  overflow: hidden;
 }
 
 .main-content {
