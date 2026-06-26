@@ -448,7 +448,7 @@ function App() {
                   </div>
                ))}
                
-               <div className="glass-card flex align-center justify-center" style={{ borderStyle: 'dashed', background: 'transparent', cursor: 'pointer', minHeight: '130px' }} onClick={() => handleOpenCatModal()}>
+               <div className="glass-card flex align-center" style={{ borderStyle: 'dashed', background: 'transparent', cursor: 'pointer', minHeight: '130px', justifyContent: 'center' }} onClick={() => handleOpenCatModal()}>
                   <div className="text-secondary flex flex-col align-center gap-2">
                      <Plus size={28} />
                      <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Tambah Kategori</span>
