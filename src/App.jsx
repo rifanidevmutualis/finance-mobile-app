@@ -333,13 +333,13 @@ function App() {
   if (!session) {
     return (
       <div className="app-container" style={{ justifyContent: 'center', padding: '24px' }}>
-        <div className="card" style={{ padding: '32px' }}>
+        <div className="neumorphic-card" style={{ padding: '32px' }}>
           <div className="flex justify-center mb-6">
-            <div style={{ backgroundColor: 'var(--accent-orange)', width: 60, height: 60, borderRadius: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
-              <Wallet size={32} />
+            <div className="animated-icon" style={{ backgroundColor: 'var(--accent-orange)', width: 70, height: 70, borderRadius: 20, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', boxShadow: '0 10px 25px rgba(255, 122, 69, 0.5)' }}>
+              <Activity size={36} />
             </div>
           </div>
-          <h1 className="font-bold mb-2 text-center" style={{ fontSize: '1.5rem' }}>Finance Tracker 1.1</h1>
+          <h1 className="font-bold mb-2 text-center" style={{ fontSize: '1.6rem' }}>Finance Tracker 1.0</h1>
           <p className="text-secondary text-center mb-8" style={{ fontSize: '0.9rem' }}>
             {isLoginView ? 'Masuk ke akun Anda' : 'Buat akun baru gratis'}
           </p>
@@ -347,19 +347,19 @@ function App() {
           {authError && <div className="text-red mb-4 text-center" style={{ fontSize: '0.9rem', backgroundColor: 'rgba(248, 113, 113, 0.1)', padding: '8px', borderRadius: '8px' }}>{authError}</div>}
 
           <form onSubmit={handleAuth}>
-            <div className="form-group">
-              <label>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="form-control" required />
+            <div className="form-group mb-4">
+              <label style={{ paddingLeft: '4px', fontSize: '0.85rem' }}>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="neumorphic-input" required />
             </div>
-            <div className="form-group mb-6">
-              <label>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="form-control" required />
+            <div className="form-group mb-8">
+              <label style={{ paddingLeft: '4px', fontSize: '0.85rem' }}>Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="neumorphic-input" required />
             </div>
-            <button type="submit" className="btn btn-primary mb-4">
+            <button type="submit" className="btn btn-primary mb-6" style={{ height: '50px', fontSize: '1rem', borderRadius: '16px', boxShadow: '0 8px 20px rgba(255, 122, 69, 0.4)' }}>
               {isLoginView ? 'Masuk' : 'Daftar Sekarang'}
             </button>
-            <div className="text-center">
-              <button type="button" onClick={() => setIsLoginView(!isLoginView)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', textDecoration: 'underline', cursor: 'pointer' }}>
+            <div style={{ textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setIsLoginView(!isLoginView)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.9rem' }}>
                 {isLoginView ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
               </button>
             </div>

@@ -83,6 +83,37 @@ body {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
 }
 
+.neumorphic-card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 8px 8px 16px rgba(0,0,0,0.5), -8px -8px 16px rgba(255,255,255,0.05);
+  border: none;
+}
+
+.neumorphic-input {
+  background: var(--bg-main);
+  border-radius: 12px;
+  box-shadow: inset 4px 4px 8px rgba(0,0,0,0.5), inset -4px -4px 8px rgba(255,255,255,0.05);
+  border: none !important;
+  color: var(--text-primary);
+  padding: 12px 16px;
+  width: 100%;
+}
+.neumorphic-input:focus {
+  outline: none;
+  box-shadow: inset 6px 6px 12px rgba(0,0,0,0.6), inset -6px -6px 12px rgba(255,255,255,0.08);
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animated-icon {
+  animation: float 3s ease-in-out infinite;
+}
+
 .card:active {
   transform: scale(0.98);
 }
