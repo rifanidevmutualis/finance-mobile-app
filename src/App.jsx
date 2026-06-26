@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil, ChevronRight } from 'lucide-react';
-import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from './supabaseClient';
 
 // Helper: Format to Rupiah
@@ -409,8 +409,15 @@ function App() {
               <div style={{ width: '100%', height: '160px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={cashflowData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <Line type="monotone" dataKey="income" stroke="var(--accent-green)" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="expense" stroke="var(--accent-red)" strokeWidth={3} dot={false} />
+                    <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `${value/1000}k`} width={40} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                      itemStyle={{ fontWeight: 'bold' }}
+                      formatter={(value) => formatRupiah(value)} 
+                    />
+                    <Line type="monotone" dataKey="income" name="Pemasukan" stroke="var(--accent-green)" strokeWidth={3} dot={false} />
+                    <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke="var(--accent-red)" strokeWidth={3} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -613,7 +620,7 @@ function App() {
             </div>
             <div className="form-group">
               <label>Tanggal Transaksi</label>
-              <input type="date" className="form-control" value={txDate} onChange={(e) => setTxDate(e.target.value)} required />
+              <input type="date" className="form-control" value={txDate} onChange={(e) => setTxDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} required />
             </div>
             <div className="form-group">
               <label>Judul / Catatan</label>
