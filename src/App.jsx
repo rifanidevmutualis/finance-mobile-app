@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut } from 'lucide-react';
+import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { supabase } from './supabaseClient';
 
@@ -25,6 +25,7 @@ function App() {
   // App State
   const [activeTab, setActiveTab] = useState('home');
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // --- SUPABASE DATA STATE ---
@@ -67,8 +68,6 @@ function App() {
       if (walletsRes.data) setWallets(walletsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
       if (transactionsRes.data) setTransactions(transactionsRes.data);
-      
-      // If wallets empty, maybe user is new and data wasn't initialized properly, but we handle it on sign up.
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -139,6 +138,11 @@ function App() {
   const [txWallet, setTxWallet] = useState('');
   const [txTitle, setTxTitle] = useState('');
 
+  // Wallet Form State
+  const [walletName, setWalletName] = useState('');
+  const [walletType, setWalletType] = useState('bank');
+  const [walletBalance, setWalletBalance] = useState('');
+
   const handleAddTransaction = async (e) => {
     e.preventDefault();
     if (!txAmount || !txCategory || !txWallet || !session) return;
@@ -198,6 +202,55 @@ function App() {
     setTxTitle('');
   };
 
+  const handleAddWallet = async (e) => {
+    e.preventDefault();
+    if (!walletName || !session) return;
+
+    const amountNum = parseInt(walletBalance) || 0;
+
+    const { data: newWallet, error } = await supabase
+      .from('wallets')
+      .insert([
+        { 
+          user_id: session.user.id,
+          name: walletName, 
+          balance: amountNum, 
+          type: walletType
+        }
+      ])
+      .select();
+
+    if (error) {
+      alert("Gagal menambahkan dompet: " + error.message);
+      return;
+    }
+
+    if (newWallet && newWallet.length > 0) {
+      setWallets([...wallets, newWallet[0]]);
+    }
+
+    setIsWalletModalOpen(false);
+    setWalletName('');
+    setWalletBalance('');
+    setWalletType('bank');
+  };
+
+  const handleDeleteWallet = async (walletId) => {
+    if(!window.confirm("Apakah Anda yakin ingin menghapus dompet ini? Semua data terkait saldo akan hilang.")) return;
+
+    const { error } = await supabase
+      .from('wallets')
+      .delete()
+      .eq('id', walletId);
+
+    if (error) {
+      alert("Gagal menghapus dompet: " + error.message);
+      return;
+    }
+
+    setWallets(wallets.filter(w => w.id !== walletId));
+  };
+
   const handleSendReportWA = () => {
     const message = `*Laporan Keuangan Bulan Ini* 📊\n\n` +
       `Total Saldo Saat Ini: ${formatRupiah(totalBalance)}\n` +
@@ -228,7 +281,7 @@ function App() {
               <Wallet size={32} />
             </div>
           </div>
-          <h1 className="font-bold mb-2 text-center" style={{ fontSize: '1.5rem' }}>Finance App</h1>
+          <h1 className="font-bold mb-2 text-center" style={{ fontSize: '1.5rem' }}>Finance Tracker 1.1</h1>
           <p className="text-secondary text-center mb-8" style={{ fontSize: '0.9rem' }}>
             {isLoginView ? 'Masuk ke akun Anda' : 'Buat akun baru gratis'}
           </p>
@@ -375,21 +428,33 @@ function App() {
                <div className="text-secondary text-center mb-4">Belum ada dompet.</div>
             )}
 
-            {wallets.map(wallet => (
-               <div key={wallet.id} className="card mb-4">
-                  <div className="flex justify-between align-center mb-2">
-                     <div className="flex align-center gap-2">
-                        <Wallet size={20} className="text-secondary" />
-                        <span className="font-bold">{wallet.name}</span>
-                     </div>
-                  </div>
-                  <div className="font-bold" style={{ fontSize: '1.5rem', color: 'var(--accent-orange)' }}>
-                     {formatRupiah(wallet.balance)}
-                  </div>
-               </div>
-            ))}
+            {wallets.map((wallet, index) => {
+               // Assign style based on type
+               let walletClass = 'wallet-default';
+               if(wallet.type === 'bank') walletClass = 'wallet-bank';
+               if(wallet.type === 'ewallet') walletClass = 'wallet-ewallet';
+               if(wallet.type === 'cash') walletClass = 'wallet-cash';
 
-            <button className="btn btn-outline" style={{ marginTop: '16px', borderStyle: 'dashed' }}>
+               return (
+                 <div key={wallet.id} className={`wallet-card ${walletClass}`} style={{ animationDelay: `${index * 0.1}s` }}>
+                    <button className="delete-wallet-btn" onClick={() => handleDeleteWallet(wallet.id)} title="Hapus Dompet">
+                       <Trash2 size={16} />
+                    </button>
+                    <div className="flex justify-between align-center mb-4">
+                       <div className="flex align-center gap-2">
+                          <Wallet size={20} style={{ opacity: 0.8 }} />
+                          <span className="font-bold" style={{ letterSpacing: '1px' }}>{wallet.name}</span>
+                       </div>
+                    </div>
+                    <div className="text-secondary mb-1" style={{ fontSize: '0.75rem', opacity: 0.7 }}>Total Saldo</div>
+                    <div className="font-bold" style={{ fontSize: '1.8rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                       {formatRupiah(wallet.balance)}
+                    </div>
+                 </div>
+               )
+            })}
+
+            <button className="btn btn-outline" style={{ marginTop: '16px', borderStyle: 'dashed' }} onClick={() => setIsWalletModalOpen(true)}>
                <Plus size={20} /> Tambah Dompet Baru
             </button>
           </>
@@ -522,6 +587,45 @@ function App() {
 
             <div className="form-group mt-6 mb-4">
               <button type="submit" className="btn btn-primary" style={{ backgroundColor: txType === 'expense' ? 'var(--accent-red)' : 'var(--accent-green)' }}>Simpan Transaksi</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Add Wallet Modal */}
+      <div className={`modal-overlay ${isWalletModalOpen ? 'open' : ''}`} onClick={(e) => {
+        if(e.target.className.includes('modal-overlay')) setIsWalletModalOpen(false);
+      }}>
+        <div className="modal-content">
+          <div className="flex justify-between align-center mb-6">
+            <h2 className="font-bold" style={{ fontSize: '1.2rem' }}>Tambah Dompet Baru</h2>
+            <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setIsWalletModalOpen(false)}>
+              <X size={24} />
+            </button>
+          </div>
+          
+          <form onSubmit={handleAddWallet}>
+            <div className="form-group">
+              <label>Nama Dompet</label>
+              <input type="text" className="form-control" placeholder="Contoh: BNI, OVO, Celengan" value={walletName} onChange={(e) => setWalletName(e.target.value)} required />
+            </div>
+
+            <div className="form-group">
+              <label>Tipe Dompet</label>
+              <select className="form-control" value={walletType} onChange={(e) => setWalletType(e.target.value)} required>
+                <option value="bank">Bank</option>
+                <option value="ewallet">E-Wallet / Uang Elektronik</option>
+                <option value="cash">Uang Tunai</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Saldo Awal (Rp)</label>
+              <input type="number" className="form-control" placeholder="0" value={walletBalance} onChange={(e) => setWalletBalance(e.target.value)} />
+            </div>
+
+            <div className="form-group mt-6 mb-4">
+              <button type="submit" className="btn btn-primary">Buat Dompet</button>
             </div>
           </form>
         </div>

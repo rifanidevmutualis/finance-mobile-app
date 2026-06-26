@@ -304,3 +304,67 @@ body {
 .btn-danger:hover {
   background-color: rgba(248, 113, 113, 0.2);
 }
+
+/* Wallet Card Styles */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wallet-card {
+  padding: 24px;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  animation: slideInUp 0.4s ease-out forwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.wallet-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+}
+
+.wallet-bank {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+}
+.wallet-ewallet {
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+}
+.wallet-cash {
+  background: linear-gradient(135deg, #e65c00 0%, #F9D423 100%);
+}
+.wallet-default {
+  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+}
+
+.delete-wallet-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.delete-wallet-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
