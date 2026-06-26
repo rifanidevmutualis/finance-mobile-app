@@ -139,6 +139,19 @@ function App() {
   const [reportStartDate, setReportStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
 
+  const [profileName, setProfileName] = useState(session?.user?.user_metadata?.full_name || '');
+  const [profileAvatar, setProfileAvatar] = useState(session?.user?.user_metadata?.avatar_url || '');
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: profileName, avatar_url: profileAvatar }
+    });
+    if (error) return alert("Gagal update profil");
+    alert("Profil berhasil diperbarui!");
+    window.location.reload();
+  };
+
   // Tx Form State
   const [txId, setTxId] = useState(null);
   const [oldTx, setOldTx] = useState(null);
@@ -366,12 +379,16 @@ function App() {
         {/* Header */}
         <div className="flex justify-between align-center mb-6">
           <div className="flex align-center gap-4">
-             <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#444', overflow: 'hidden' }}>
-              <img src="https://i.pravatar.cc/100?img=11" alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+             <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#444', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {session.user.user_metadata?.avatar_url ? (
+                <img src={session.user.user_metadata.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontWeight: 'bold', color: 'white' }}>{(session.user.user_metadata?.full_name || session.user.email)[0].toUpperCase()}</span>
+              )}
             </div>
             <div>
                <div className="text-secondary" style={{ fontSize: '0.8rem' }}>Selamat datang,</div>
-               <div className="font-bold">{session.user.email.split('@')[0]}</div>
+               <div className="font-bold">{session.user.user_metadata?.full_name || session.user.email.split('@')[0]}</div>
             </div>
           </div>
           <Bell size={20} className="text-secondary" />
@@ -554,12 +571,12 @@ function App() {
                
                <div className="flex gap-2 mb-4">
                   <div style={{ flex: 1 }}>
-                     <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Mulai</label>
-                     <input type="date" className="form-control" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '8px' }} />
+                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Mulai</label>
+                     <input type="date" className="form-control" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.75rem' }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                     <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Sampai</label>
-                     <input type="date" className="form-control" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '8px' }} />
+                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sampai</label>
+                     <input type="date" className="form-control" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.75rem' }} />
                   </div>
                </div>
 
@@ -583,8 +600,20 @@ function App() {
                </button>
             </div>
             <div className="card">
-               <h3 className="font-bold mb-4">Akun</h3>
-               <div className="form-group">
+               <h3 className="font-bold mb-4">Akun & Profil</h3>
+               <form onSubmit={handleUpdateProfile}>
+                 <div className="form-group">
+                    <label>Nama Tampilan</label>
+                    <input type="text" className="form-control" value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Nama Anda" />
+                 </div>
+                 <div className="form-group">
+                    <label>URL Foto Profil (Opsional)</label>
+                    <input type="text" className="form-control" value={profileAvatar} onChange={e => setProfileAvatar(e.target.value)} placeholder="https://..." />
+                 </div>
+                 <button type="submit" className="btn btn-primary" style={{ padding: '8px', fontSize: '0.85rem' }}>Simpan Profil</button>
+               </form>
+
+               <div className="form-group mt-6">
                   <label>Email Terdaftar</label>
                   <div className="form-control" style={{ opacity: 0.5 }}>{session.user.email}</div>
                </div>
