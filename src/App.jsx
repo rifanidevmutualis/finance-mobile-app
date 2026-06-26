@@ -510,13 +510,13 @@ function App() {
                {transactions.map(tx => (
                   <div key={tx.id} className="tx-card-layered">
                      <div className="tx-card-content">
-                        <div className="flex align-center gap-3">
-                           <div style={{ width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
+                        <div className="flex align-center gap-3" style={{ flex: 1, minWidth: 0, paddingRight: '8px' }}>
+                           <div style={{ width: 40, height: 40, flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
                               {categories.find(c => c.name === tx.category_name)?.icon || '💸'}
                            </div>
-                           <div>
-                              <div className="font-bold" style={{ fontSize: '1rem', marginBottom: '2px' }}>{tx.title}</div>
-                              <div className="text-secondary" style={{ fontSize: '0.75rem' }}>{tx.wallet_name} • {new Date(tx.created_at).toLocaleDateString('id-ID')}</div>
+                           <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="font-bold" style={{ fontSize: '1rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.title}</div>
+                              <div className="text-secondary" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.wallet_name} • {new Date(tx.created_at).toLocaleDateString('id-ID')}</div>
                            </div>
                         </div>
                         <div className="flex flex-col align-end gap-2">
