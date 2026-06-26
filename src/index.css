@@ -28,7 +28,9 @@
 
 html, body {
   height: 100%;
+  width: 100%;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 body {
@@ -53,6 +55,7 @@ body {
 
 /* App container for mobile view */
 .app-container {
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
   height: 100vh;
@@ -63,6 +66,7 @@ body {
   flex-direction: column;
   box-shadow: 0 0 20px rgba(0,0,0,0.5); /* shadow for desktop preview */
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 .main-content {
@@ -70,6 +74,7 @@ body {
   padding: 24px;
   padding-bottom: 100px; /* space for bottom nav */
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Reusable Components */
