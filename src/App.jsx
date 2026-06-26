@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil, ChevronRight } from 'lucide-react';
+import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil, ChevronRight, Sparkles, Send } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from './supabaseClient';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Helper: Format to Rupiah
 const formatRupiah = (number) => {
@@ -30,6 +31,57 @@ function App() {
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [isWalletDetailsOpen, setIsWalletDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // AI Chat State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatHistory, setChatHistory] = useState([{ role: 'model', text: 'Halo! Saya Penasihat Keuangan AI Anda. Ada yang ingin didiskusikan tentang pengeluaran atau saldo Anda hari ini?' }]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setChatHistory(prev => [...prev, { role: 'user', text: userMessage }]);
+    setIsChatLoading(true);
+
+    try {
+      let apiKey = localStorage.getItem('GEMINI_API_KEY');
+      if (!apiKey) {
+        apiKey = window.prompt("Masukkan Gemini API Key Anda untuk mengaktifkan AI Advisor (Kunci akan disimpan aman di memori browser Anda):");
+        if (!apiKey) {
+          setIsChatLoading(false);
+          return;
+        }
+        localStorage.setItem('GEMINI_API_KEY', apiKey);
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const context = `
+Anda adalah asisten penasihat keuangan pribadi. Berikan saran yang singkat, ramah, santai tapi solutif.
+Data Keuangan Pengguna saat ini:
+- Total Saldo: ${formatRupiah(totalBalance)}
+- Pemasukan Bulan Ini: ${formatRupiah(totalIncomeThisMonth)}
+- Pengeluaran Bulan Ini: ${formatRupiah(totalExpenseThisMonth)}
+Gunakan data ini untuk memberikan saran yang relevan (misalnya, jika saldo menipis, sarankan untuk hemat).
+`;
+      const prompt = `${context}\n\nPertanyaan Pengguna: ${userMessage}`;
+      
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+
+      setChatHistory(prev => [...prev, { role: 'model', text: responseText }]);
+    } catch (error) {
+      console.error(error);
+      setChatHistory(prev => [...prev, { role: 'model', text: 'Maaf, terjadi kesalahan saat menghubungi AI. Pastikan API Key valid atau coba lagi nanti.' }]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
 
   // --- SUPABASE DATA STATE ---
   const [wallets, setWallets] = useState([]);
@@ -823,6 +875,50 @@ function App() {
             ))}
             {transactions.length === 0 && <div className="text-secondary text-center">Belum ada riwayat transaksi.</div>}
           </div>
+        </div>
+      </div>
+
+      {/* AI Floating Button */}
+      <button className="fab" style={{ bottom: '110px', right: '20px', left: 'auto', transform: 'none', backgroundColor: '#8a2be2', zIndex: 55, width: '50px', height: '50px' }} onClick={() => setIsChatOpen(true)}>
+        <Sparkles size={24} color="white" />
+      </button>
+
+      {/* AI Chat Modal */}
+      <div className={`modal-overlay ${isChatOpen ? 'open' : ''}`} onClick={(e) => { if(e.target.className.includes('modal-overlay')) setIsChatOpen(false); }}>
+        <div className="modal-content" style={{ display: 'flex', flexDirection: 'column', height: '80vh', padding: 0 }}>
+          <div className="flex justify-between align-center" style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', backgroundColor: '#8a2be2', color: 'white', borderTopLeftRadius: 'var(--border-radius-lg)', borderTopRightRadius: 'var(--border-radius-lg)' }}>
+            <div className="flex align-center gap-2">
+              <Sparkles size={20} />
+              <h2 className="font-bold" style={{ fontSize: '1.1rem', margin: 0 }}>AI Advisor</h2>
+            </div>
+            <button type="button" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} onClick={() => setIsChatOpen(false)}>
+              <X size={24} />
+            </button>
+          </div>
+          
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {chatHistory.map((chat, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: chat.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div style={{ maxWidth: '85%', padding: '12px 16px', borderRadius: '16px', backgroundColor: chat.role === 'user' ? 'var(--accent-orange)' : 'var(--bg-card)', color: chat.role === 'user' ? 'white' : 'var(--text-primary)', border: chat.role === 'model' ? '1px solid var(--border-color)' : 'none', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                   {chat.text}
+                </div>
+              </div>
+            ))}
+            {isChatLoading && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                   AI sedang berpikir...
+                </div>
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={handleSendChat} style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px', backgroundColor: 'var(--bg-card)' }}>
+             <input type="text" className="form-control" placeholder="Tanya sesuatu..." value={chatInput} onChange={e => setChatInput(e.target.value)} style={{ flex: 1, margin: 0 }} disabled={isChatLoading} />
+             <button type="submit" className="btn btn-primary" style={{ padding: '0 16px', backgroundColor: '#8a2be2' }} disabled={isChatLoading}>
+                <Send size={20} />
+             </button>
+          </form>
         </div>
       </div>
 
