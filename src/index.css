@@ -368,3 +368,75 @@ body {
   background: rgba(239, 68, 68, 0.9);
   color: white;
 }
+
+/* Category Glassmorphism Styles */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 16px;
+  position: relative;
+  text-align: center;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.glass-card:hover {
+  transform: translateY(-3px);
+}
+
+.glass-income:hover {
+  background: rgba(74, 222, 128, 0.08);
+  border-color: rgba(74, 222, 128, 0.3);
+  box-shadow: 0 10px 30px rgba(74, 222, 128, 0.15);
+}
+
+.glass-expense:hover {
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.3);
+  box-shadow: 0 10px 30px rgba(248, 113, 113, 0.15);
+}
+
+.cat-action-btn {
+  position: absolute;
+  top: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 2;
+}
+
+.cat-action-btn.edit {
+  right: 40px;
+}
+.cat-action-btn.delete {
+  right: 8px;
+}
+
+.cat-action-btn.edit:hover {
+  background: rgba(59, 130, 246, 0.8);
+  color: white;
+}
+.cat-action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+}
