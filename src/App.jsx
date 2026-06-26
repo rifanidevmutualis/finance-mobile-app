@@ -128,15 +128,33 @@ function App() {
     await supabase.auth.signOut();
   };
 
-  const cashflowData = [
-    { name: 'Jan', income: 4000000, expense: 2400000 },
-    { name: 'Feb', income: 3000000, expense: 1398000 },
-    { name: 'Mar', income: 2000000, expense: 9800000 },
-    { name: 'Apr', income: 2780000, expense: 3908000 },
-    { name: 'May', income: 1890000, expense: 4800000 },
-    { name: 'Jun', income: 2390000, expense: 3800000 },
-    { name: 'Jul', income: 3490000, expense: 4300000 },
-  ];
+  // Calculate cashflow data for the last 6 months dynamically based on transactions
+  const getDynamicCashflowData = () => {
+    const data = [];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    const currentDate = new Date();
+    let currentMonth = currentDate.getMonth();
+    let currentYear = currentDate.getFullYear();
+
+    for (let i = 5; i >= 0; i--) {
+      let d = new Date(currentYear, currentMonth - i, 1);
+      let monthStr = monthNames[d.getMonth()];
+      
+      const monthlyTx = transactions.filter(tx => {
+        const txDate = new Date(tx.created_at);
+        return txDate.getMonth() === d.getMonth() && txDate.getFullYear() === d.getFullYear();
+      });
+
+      const income = monthlyTx.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
+      const expense = monthlyTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+
+      data.push({ name: monthStr, income, expense });
+    }
+    return data;
+  };
+
+  const cashflowData = getDynamicCashflowData();
 
   const totalBalance = wallets.reduce((acc, wallet) => acc + Number(wallet.balance), 0);
   const totalIncomeThisMonth = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
@@ -448,32 +466,40 @@ function App() {
             </div>
 
             <div className="card mb-6">
-              <h2 className="font-semibold mb-4 text-secondary" style={{ fontSize: '0.9rem' }}>Tren Pendapatan dan Pengeluaran (1 Tahun)</h2>
-              <div style={{ width: '100%', height: '160px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={cashflowData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--accent-green)" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="var(--accent-green)" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--accent-red)" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="var(--accent-red)" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
-                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={45} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
-                      itemStyle={{ fontWeight: 'bold' }}
-                      formatter={(value) => formatRupiah(value)} 
-                    />
-                    <Area type="monotone" dataKey="income" name="Pemasukan" stroke="var(--accent-green)" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
-                    <Area type="monotone" dataKey="expense" name="Pengeluaran" stroke="var(--accent-red)" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <h2 className="font-semibold mb-4 text-secondary" style={{ fontSize: '0.9rem' }}>Tren Pendapatan dan Pengeluaran (6 Bulan Terakhir)</h2>
+              {transactions.length === 0 ? (
+                 <div className="flex flex-col align-center justify-center text-center" style={{ width: '100%', height: '160px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '8px', opacity: 0.5 }}>📈</div>
+                    <div className="text-secondary font-bold" style={{ fontSize: '0.9rem', marginBottom: '4px' }}>Belum ada tren data.</div>
+                    <div className="text-secondary" style={{ fontSize: '0.75rem', opacity: 0.7, padding: '0 16px' }}>Catat transaksi pertama Anda untuk melihat grafik arus kas Anda di sini.</div>
+                 </div>
+              ) : (
+                <div style={{ width: '100%', height: '160px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={cashflowData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--accent-green)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="var(--accent-green)" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--accent-red)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="var(--accent-red)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={45} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        itemStyle={{ fontWeight: 'bold' }}
+                        formatter={(value) => formatRupiah(value)} 
+                      />
+                      <Area type="monotone" dataKey="income" name="Pemasukan" stroke="var(--accent-green)" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                      <Area type="monotone" dataKey="expense" name="Pengeluaran" stroke="var(--accent-red)" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
 
             <div>
