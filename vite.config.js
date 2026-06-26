@@ -19,10 +19,20 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/favicon.svg',
-            sizes: '192x192 512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            src: 'https://via.placeholder.com/192.png/1a1a1c/ffffff?text=FT',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'https://via.placeholder.com/512.png/1a1a1c/ffffff?text=FT',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'https://via.placeholder.com/512.png/1a1a1c/ffffff?text=FT',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }
