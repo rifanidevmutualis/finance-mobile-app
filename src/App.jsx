@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil, ChevronRight } from 'lucide-react';
-import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from './supabaseClient';
 
 // Helper: Format to Rupiah
@@ -408,7 +408,17 @@ function App() {
               <h2 className="font-semibold mb-4 text-secondary" style={{ fontSize: '0.9rem' }}>Tren Pendapatan dan Pengeluaran (1 Bulan)</h2>
               <div style={{ width: '100%', height: '160px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={cashflowData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <AreaChart data={cashflowData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--accent-green)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--accent-green)" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--accent-red)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--accent-red)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
                     <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `${value/1000}k`} width={40} />
                     <Tooltip 
@@ -416,9 +426,9 @@ function App() {
                       itemStyle={{ fontWeight: 'bold' }}
                       formatter={(value) => formatRupiah(value)} 
                     />
-                    <Line type="monotone" dataKey="income" name="Pemasukan" stroke="var(--accent-green)" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke="var(--accent-red)" strokeWidth={3} dot={false} />
-                  </LineChart>
+                    <Area type="monotone" dataKey="income" name="Pemasukan" stroke="var(--accent-green)" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                    <Area type="monotone" dataKey="expense" name="Pengeluaran" stroke="var(--accent-red)" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
