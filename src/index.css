@@ -321,6 +321,10 @@ body {
   font-size: 1rem;
   box-shadow: inset 4px 4px 8px rgba(0,0,0,0.5), inset -4px -4px 8px rgba(255,255,255,0.05);
   width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
 }
 
 .form-control:focus {
