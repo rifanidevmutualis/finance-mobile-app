@@ -62,17 +62,28 @@ function App() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [walletsRes, categoriesRes, transactionsRes] = await Promise.all([
+      const fetchPromise = Promise.all([
         supabase.from('wallets').select('*').order('name'),
         supabase.from('categories').select('*').order('name'),
         supabase.from('transactions').select('*').order('created_at', { ascending: false })
       ]);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Koneksi timeout. Supabase mungkin sedang tidur atau jaringan bermasalah.')), 10000)
+      );
+      
+      const [walletsRes, categoriesRes, transactionsRes] = await Promise.race([fetchPromise, timeoutPromise]);
+
+      if (walletsRes.error) console.error("Wallet Error:", walletsRes.error);
+      if (categoriesRes.error) console.error("Category Error:", categoriesRes.error);
+      if (transactionsRes.error) console.error("Tx Error:", transactionsRes.error);
 
       if (walletsRes.data) setWallets(walletsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
       if (transactionsRes.data) setTransactions(transactionsRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
+      alert("Gagal memuat data: " + error.message);
     } finally {
       setIsLoading(false);
     }
