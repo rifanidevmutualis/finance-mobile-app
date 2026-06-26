@@ -130,6 +130,15 @@ function App() {
   const totalIncomeThisMonth = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
   const totalExpenseThisMonth = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
 
+  const formatYAxis = (value) => {
+    if (value >= 1000000) return `${value / 1000000}juta`;
+    if (value >= 1000) return `${value / 1000}rb`;
+    return value;
+  };
+
+  const [reportStartDate, setReportStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+
   // Tx Form State
   const [txId, setTxId] = useState(null);
   const [oldTx, setOldTx] = useState(null);
@@ -405,7 +414,7 @@ function App() {
             </div>
 
             <div className="card mb-6">
-              <h2 className="font-semibold mb-4 text-secondary" style={{ fontSize: '0.9rem' }}>Tren Pendapatan dan Pengeluaran (1 Bulan)</h2>
+              <h2 className="font-semibold mb-4 text-secondary" style={{ fontSize: '0.9rem' }}>Tren Pendapatan dan Pengeluaran (1 Tahun)</h2>
               <div style={{ width: '100%', height: '160px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={cashflowData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
@@ -420,7 +429,7 @@ function App() {
                       </linearGradient>
                     </defs>
                     <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
-                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `${value/1000}k`} width={40} />
+                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={formatYAxis} width={45} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
                       itemStyle={{ fontWeight: 'bold' }}
@@ -538,13 +547,37 @@ function App() {
         {/* --- TAB: SETTINGS & REPORT --- */}
         {activeTab === 'settings' && (
           <>
-            <h1 className="font-bold mb-6" style={{ fontSize: '1.5rem' }}>Pengaturan</h1>
+            <h1 className="font-bold mb-6" style={{ fontSize: '1.5rem' }}>Pengaturan & Laporan</h1>
             <div className="card mb-6">
-               <h3 className="font-bold mb-2">Laporan Bulan Ini</h3>
-               <p className="text-secondary mb-4" style={{ fontSize: '0.9rem' }}>Kirim ringkasan laporan keuangan Anda bulan ini langsung via WhatsApp.</p>
+               <h3 className="font-bold mb-2">Ekspor Laporan</h3>
+               <p className="text-secondary mb-4" style={{ fontSize: '0.9rem' }}>Filter tanggal untuk merekap arus kas dan saldo per dompet.</p>
+               
+               <div className="flex gap-2 mb-4">
+                  <div style={{ flex: 1 }}>
+                     <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Mulai</label>
+                     <input type="date" className="form-control" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '8px' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                     <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Sampai</label>
+                     <input type="date" className="form-control" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '8px' }} />
+                  </div>
+               </div>
+
                <button className="btn" style={{ backgroundColor: '#25D366', color: 'white' }} onClick={() => {
-                   const message = `*Laporan Keuangan Bulan Ini* 📊\n\nTotal Saldo Saat Ini: ${formatRupiah(totalBalance)}\nPemasukan Bulan Ini: ${formatRupiah(totalIncomeThisMonth)}\nPengeluaran Bulan Ini: ${formatRupiah(totalExpenseThisMonth)}\n\nSisa Uang (Arus Kas): ${formatRupiah(totalIncomeThisMonth - totalExpenseThisMonth)}\n\n_Laporan dikirim otomatis dari App Keuangan_`;
-                   window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                   const start = new Date(reportStartDate); start.setHours(0,0,0,0);
+                   const end = new Date(reportEndDate); end.setHours(23,59,59,999);
+                   const filteredTx = transactions.filter(tx => { const txDate = new Date(tx.created_at); return txDate >= start && txDate <= end; });
+                   const inc = filteredTx.filter(tx => tx.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
+                   const exp = filteredTx.filter(tx => tx.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
+                   const b = wallets.filter(w => w.type === 'bank');
+                   const e = wallets.filter(w => w.type === 'ewallet');
+                   const c = wallets.filter(w => w.type === 'cash');
+                   let msg = `*Laporan Keuangan* 📊\nPeriode: ${start.toLocaleDateString('id-ID')} s/d ${end.toLocaleDateString('id-ID')}\n\n*ARUS KAS*\nPemasukan: ${formatRupiah(inc)}\nPengeluaran: ${formatRupiah(exp)}\nSelisih: ${formatRupiah(inc - exp)}\n\n*SALDO DOMPET*\n`;
+                   if(b.length) msg += `🏦 Bank:\n` + b.map(w => `- ${w.name}: ${formatRupiah(w.balance)}`).join('\n') + `\n`;
+                   if(e.length) msg += `📱 E-Wallet:\n` + e.map(w => `- ${w.name}: ${formatRupiah(w.balance)}`).join('\n') + `\n`;
+                   if(c.length) msg += `💵 Tunai:\n` + c.map(w => `- ${w.name}: ${formatRupiah(w.balance)}`).join('\n') + `\n`;
+                   msg += `\n*TOTAL SALDO: ${formatRupiah(totalBalance)}*\n`;
+                   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                }}>
                   <MessageCircle size={20} /> Kirim ke WhatsApp
                </button>
