@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil, ChevronRight } from 'lucide-react';
+import { Home, Calendar, Plus, Wallet, Settings, Bell, ChevronUp, ChevronDown, Activity, X, ArrowUpRight, ArrowDownRight, MessageCircle, LogOut, Trash2, Pencil, ChevronRight, Loader2 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from './supabaseClient';
 
@@ -370,7 +370,12 @@ function App() {
   }
 
   if (isLoading) {
-    return <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center' }}><div className="font-bold text-secondary">Loading Data dari Supabase...</div></div>;
+    return (
+      <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <Loader2 color="var(--accent-orange)" size={48} style={{ animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
+        <div className="font-bold text-secondary">Memuat Data...</div>
+      </div>
+    );
   }
 
   return (
@@ -539,18 +544,19 @@ function App() {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                {categories.map(cat => (
-                  <div key={cat.id} className={`glass-card ${cat.type === 'income' ? 'glass-income' : 'glass-expense'}`}>
-                     <button className="cat-action-btn edit" onClick={() => handleOpenCatModal(cat)}>
-                        <Pencil size={12} />
-                     </button>
-                     <button className="cat-action-btn delete" onClick={() => handleDeleteCategory(cat.id)}>
-                        <Trash2 size={12} />
-                     </button>
-
+                  <div key={cat.id} className={`glass-card ${cat.type === 'income' ? 'glass-income' : 'glass-expense'}`} style={{ paddingBottom: '12px' }}>
                      <div style={{ fontSize: '2.5rem', marginBottom: '8px', textShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>{cat.icon}</div>
                      <div className="font-bold" style={{ fontSize: '1rem', marginBottom: '4px' }}>{cat.name}</div>
                      <div className="text-secondary" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
                         {cat.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                     </div>
+                     <div className="cat-actions-footer">
+                        <button className="cat-action-btn edit" onClick={() => handleOpenCatModal(cat)}>
+                           <Pencil size={14} />
+                        </button>
+                        <button className="cat-action-btn delete" onClick={() => handleDeleteCategory(cat.id)}>
+                           <Trash2 size={14} />
+                        </button>
                      </div>
                   </div>
                ))}
@@ -573,14 +579,14 @@ function App() {
                <h3 className="font-bold mb-2">Ekspor Laporan</h3>
                <p className="text-secondary mb-4" style={{ fontSize: '0.9rem' }}>Filter tanggal untuk merekap arus kas dan saldo per dompet.</p>
                
-               <div className="flex gap-2 mb-4">
-                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+               <div className="flex flex-col gap-4 mb-4">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
                      <label style={{ fontSize: '0.8rem', marginBottom: '4px', display: 'block', color: 'var(--text-secondary)' }}>Mulai</label>
-                     <input type="date" className="form-control" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.8rem', width: '100%' }} />
+                     <input type="date" className="form-control" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '8px', fontSize: '0.9rem', width: '100%', WebkitAppearance: 'none' }} />
                   </div>
-                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
                      <label style={{ fontSize: '0.8rem', marginBottom: '4px', display: 'block', color: 'var(--text-secondary)' }}>Sampai</label>
-                     <input type="date" className="form-control" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '6px', fontSize: '0.8rem', width: '100%' }} />
+                     <input type="date" className="form-control" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} style={{ padding: '8px', fontSize: '0.9rem', width: '100%', WebkitAppearance: 'none' }} />
                   </div>
                </div>
 
