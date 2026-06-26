@@ -138,6 +138,7 @@ function App() {
   const [txCategory, setTxCategory] = useState('');
   const [txWallet, setTxWallet] = useState('');
   const [txTitle, setTxTitle] = useState('');
+  const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
 
   const handleOpenTxModal = (tx = null) => {
     if (tx) {
@@ -148,6 +149,7 @@ function App() {
       setTxAmount(tx.amount.toString());
       setTxWallet(tx.wallet_name);
       setTxCategory(tx.category_name);
+      setTxDate(new Date(tx.created_at).toISOString().split('T')[0]);
     } else {
       setTxId(null);
       setOldTx(null);
@@ -156,6 +158,7 @@ function App() {
       setTxAmount('');
       setTxWallet('');
       setTxCategory('');
+      setTxDate(new Date().toISOString().split('T')[0]);
     }
     setIsTxModalOpen(true);
   };
@@ -170,7 +173,7 @@ function App() {
        // UPDATE LOGIC
        const { error: txError } = await supabase
           .from('transactions')
-          .update({ title: txTitle, amount: amountNum, type: txType, wallet_name: txWallet, category_name: txCategory })
+          .update({ title: txTitle, amount: amountNum, type: txType, wallet_name: txWallet, category_name: txCategory, created_at: new Date(txDate).toISOString() })
           .eq('id', txId);
        
        if (txError) return alert("Gagal update transaksi");
@@ -210,7 +213,8 @@ function App() {
           amount: amountNum, 
           type: txType, 
           wallet_name: txWallet, 
-          category_name: txCategory 
+          category_name: txCategory,
+          created_at: new Date(txDate).toISOString()
         }
       ])
       .select();
@@ -606,6 +610,10 @@ function App() {
             <div className="flex gap-4 mb-4">
                <button type="button" className={`btn ${txType === 'expense' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: 1, backgroundColor: txType === 'expense' ? 'var(--accent-red)' : 'transparent', borderColor: txType === 'expense' ? 'var(--accent-red)' : 'var(--border-color)' }} onClick={() => setTxType('expense')}>Pengeluaran</button>
                <button type="button" className={`btn ${txType === 'income' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: 1, backgroundColor: txType === 'income' ? 'var(--accent-green)' : 'transparent', borderColor: txType === 'income' ? 'var(--accent-green)' : 'var(--border-color)' }} onClick={() => setTxType('income')}>Pemasukan</button>
+            </div>
+            <div className="form-group">
+              <label>Tanggal Transaksi</label>
+              <input type="date" className="form-control" value={txDate} onChange={(e) => setTxDate(e.target.value)} required />
             </div>
             <div className="form-group">
               <label>Judul / Catatan</label>
